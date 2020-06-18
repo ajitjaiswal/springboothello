@@ -1,0 +1,68 @@
+steps:
+
+#Build the image 
+- name: 'gcr.io/cloud-builders/docker'
+  dir: ${_REPO_BRANCH}
+  args: ['build','-t','gcr.io/${_PROJECT}/${_CONTAINERNAME}:${_VERSION}','.']
+  
+#verify the image 
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['images']
+
+
+#Push the image  
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push','gcr.io/${_PROJECT}/${_CONTAINERNAME}:${_VERSION}']
+  
+
+#Create deployment using kubectl set
+- name: 'gcr.io/cloud-builders/kubectl'
+  args: ['create', 'deployment', '${_DEPLOYMENTNAME}${BUILD_ID}','--image=gcr.io/${_PROJECT}/${_CONTAINERNAME}:${_VERSION}']
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=${_ZONE}'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=${_GKE_CLUSTER}'
+
+#Expose as Service using kubectl set
+- name: 'gcr.io/cloud-builders/kubectl'
+  args: ['expose', 'deployment', '${_DEPLOYMENTNAME}${BUILD_ID}', '--type=LoadBalancer', '--port=80', '--target-port=8080']
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=${_ZONE}'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=${_GKE_CLUSTER}'
+  
+
+  
+#Get the deployments
+- name: 'gcr.io/cloud-builders/kubectl'
+  args: ['get', 'deployments']
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=${_ZONE}'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=${_GKE_CLUSTER}' 
+  
+#Get the pods
+- name: 'gcr.io/cloud-builders/kubectl'
+  args: ['get', 'pods']
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=${_ZONE}'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=${_GKE_CLUSTER}'
+  
+#Get the services
+- name: 'gcr.io/cloud-builders/kubectl'
+  args: ['get', 'svc']
+  env:
+  - 'CLOUDSDK_COMPUTE_ZONE=${_ZONE}'
+  - 'CLOUDSDK_CONTAINER_CLUSTER=${_GKE_CLUSTER}'
+
+substitutions:
+    #GCP Specific configuration. Please DON'T change anything
+    _PROJECT: tidy-access-258803
+    _ZONE: us-central1-c
+    _GKE_CLUSTER:  cluster-1-datamask  
+
+#Repository Specific configuration. DevOps can change this settings
+    _DEPLOYMENTNAME: helloapp
+    _CONTAINERNAME: helloapp  
+    _REPO_NAME: datamask
+    _REPO_BRANCH: datamask_prj
+    
+    # Developers ONLY change
+    _VERSION: v1.0
